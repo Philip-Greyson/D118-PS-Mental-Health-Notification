@@ -137,6 +137,7 @@ if __name__ == '__main__':
                 for code in codes:
                     attendanceCodeMap.update({code[0]: code[1]})  # add the school:id map to the dictionary
                 print(f'DBUG: attendance code IDs: {attendanceCodeMap}')
+                print(f'DBUG: attendance code IDs: {attendanceCodeMap}', file=log)
 
                 # start going through students one at a time
                 cur.execute('SELECT stu.student_number, stu.id, stu.dcid, stu.first_name, stu.last_name, stu.schoolid, schools.abbreviation, stufields.custom_counselor_email, stufields.custom_deans_house_email, stufields.custom_social_email, stufields.custom_psych_email, absent.mentalhealth_notified, absent.mentalhealth_notified_2\
@@ -162,13 +163,16 @@ if __name__ == '__main__':
                     entries = cur.fetchall()
                     if len(entries) > 0:
                         print(f'DBUG: Student {stuNum} has taken {len(entries)} mental health day(s) in year code {termYear}')
+                        print(f'DBUG: Student {stuNum} has taken {len(entries)} mental health day(s) in year code {termYear}', file=log)
                         for entry in entries:
                             print(f'DBUG: {stuNum} took a mental health day on at building {entry[1]} on {entry[3].strftime("%m/%d/%y")}')
+                            print(f'DBUG: {stuNum} took a mental health day on at building {entry[1]} on {entry[3].strftime("%m/%d/%y")}', file=log)
                         if (FIRST_NOTIFY_THRESHOLD <= len(entries) < SECOND_NOTIFY_THRESHOLD) and not firstNotification:  # if we have met the threshold for stage 1 and the notification has not already been sent, send an email
                             toEmail = schoolAbbrev + EMAIL_GROUP_SUFFIX  # make the school specific email group string
                             if school == 5:
                                 toEmail = f'{toEmail},{guidanceCounselorEmail},{deansEmail},{socialWorkerEmail},{psychologistEmail}'  # if we are at the high school, need to add their specific student service team
                             print(f'INFO: {stuNum} has reached the warning threshold of {len(entries)} mental health days and a notification has not been sent, sending email to {toEmail}')
+                            print(f'INFO: {stuNum} has reached the warning threshold of {len(entries)} mental health days and a notification has not been sent, sending email to {toEmail}', file=log)
                             try:
                                 mime_message = EmailMessage()  # create an email message object
                                 # define headers
@@ -198,6 +202,7 @@ if __name__ == '__main__':
                             if school == 5:
                                 toEmail = f'{toEmail},{guidanceCounselorEmail},{deansEmail},{socialWorkerEmail},{psychologistEmail}'  # if we are at the high school, need to add their specific student service team
                             print(f'INFO: {stuNum} has reached the max threshold with {len(entries)} mental health days and a notification has not been sent, sending email to {toEmail}')
+                            print(f'INFO: {stuNum} has reached the max threshold with {len(entries)} mental health days and a notification has not been sent, sending email to {toEmail}', file=log)
                             try:
                                 mime_message = EmailMessage()  # create an email message object
                                 # define headers
