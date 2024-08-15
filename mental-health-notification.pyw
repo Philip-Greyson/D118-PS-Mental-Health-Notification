@@ -38,10 +38,13 @@ SCOPES = ['https://www.googleapis.com/auth/gmail.compose']
 
 EMAIL_GROUP_SUFFIX = '-mental-notifications@d118.org'  # a suffix to be appended to the school abbreviations and will make up the group email
 ATTENDANCE_CODE = 'MH'  # the attendance code we will actually search for
-NOTIFY_THRESHOLD = 5  # when this number of the code above is reached it will send the notification
+FIRST_NOTIFY_THRESHOLD = 3  # when this number of the code above is reached it will send the 1st notification
+SECOND_NOTIFY_THRESHOLD = 5  # when this number of the code above is reached it will send the 2nd notification
+
 
 def ps_update_custom_field(table: str, field: str, dcid: int, value) -> str:
     """Function to do the update of a custom field in a student extension table, so that the large json does not need to be used every time an update is needed elsewhere."""
+    # print(f'DBUG: table {table}, field {field}, student DCID {dcid}, value {value}')
     try:
         data = {
             'students' : {
@@ -69,8 +72,8 @@ def ps_update_custom_field(table: str, field: str, dcid: int, value) -> str:
         print(f'ERROR while trying to update custom field {field} in table {table} for student DCID {dcid}: {er}')
         return 'ERROR'
     if statusCode != 'SUCCESS':
-        print(f'ERROR: Could not update field {field}  in table {table} for student DCIC {dcid}, status {result.json().get('results').get('result')}')
-        print(f'ERROR: Could not update field {field}  in table {table} for student DCIC {dcid}, status {result.json().get('results').get('result')}', file=log)
+        print(f'ERROR: Could not update field {field}  in table {table} for student DCID {dcid}, status {result.json().get('results').get('result')}')
+        print(f'ERROR: Could not update field {field}  in table {table} for student DCID {dcid}, status {result.json().get('results').get('result')}', file=log)
     else:
         print(f'DBUG: Successfully updated field {field} in table {table} for student DCID {dcid} to {value}')
         print(f'DBUG: Successfully updated field {field} in table {table} for student DCID {dcid} to {value}', file=log)
@@ -133,11 +136,11 @@ if __name__ == '__main__':
                 codes = cur.fetchall()
                 for code in codes:
                     attendanceCodeMap.update({code[0]: code[1]})  # add the school:id map to the dictionary
-                print(f'DBUG attendance code IDs: {attendanceCodeMap}')
+                print(f'DBUG: attendance code IDs: {attendanceCodeMap}')
 
                 # start going through students one at a time
-                cur.execute('SELECT stu.student_number, stu.id, stu.dcid, stu.first_name, stu.last_name, stu.schoolid, schools.abbreviation, stufields.custom_counselor_email, stufields.custom_deans_house_email, stufields.custom_social_email, stufields.custom_psych_email\
-                             FROM students stu LEFT JOIN schools ON stu.schoolid = schools.school_number LEFT JOIN u_studentsuserfields stufields ON stu.dcid = stufields.studentsdcid WHERE stu.enroll_status = 0')
+                cur.execute('SELECT stu.student_number, stu.id, stu.dcid, stu.first_name, stu.last_name, stu.schoolid, schools.abbreviation, stufields.custom_counselor_email, stufields.custom_deans_house_email, stufields.custom_social_email, stufields.custom_psych_email, absent.mentalhealth_notified, absent.mentalhealth_notified_2\
+                             FROM students stu LEFT JOIN schools ON stu.schoolid = schools.school_number LEFT JOIN u_studentsuserfields stufields ON stu.dcid = stufields.studentsdcid LEFT JOIN u_chronicabsenteeism absent ON stu.dcid = absent.studentsdcid WHERE stu.enroll_status = 0')
                 students = cur.fetchall()
                 for student in students:
                     stuNum = int(student[0])  # normal ID number
@@ -151,8 +154,75 @@ if __name__ == '__main__':
                     deansEmail = str(student[8])
                     socialWorkerEmail = str(student[9])
                     psychologistEmail = str(student[10])
+                    firstNotification = True if student[11] == 1 else False
+                    secondNotification = True if student[12] == 1 else False
+                    absenceCode = attendanceCodeMap.get(school)  # get the specific mental health code for the building the student is in
                     # do the query of attendance table for the mental health day code
-                    cur.execute('SELECT * FROM attendance WHERE studentid = 51274')
-                    # entries = cur.fetchall()
-                    # for entry in entries:
-                    #     print(entry)
+                    cur.execute("SELECT studentid, schoolid, dcid, att_date FROM attendance WHERE ATT_MODE_CODE = 'ATT_ModeDaily' AND studentid = :student AND attendance_codeid = :code AND YEARID = :year", student=stuID, code=absenceCode, year=termYear)
+                    entries = cur.fetchall()
+                    if len(entries) > 0:
+                        print(f'DBUG: Student {stuNum} has taken {len(entries)} mental health day(s) in year code {termYear}')
+                        for entry in entries:
+                            print(f'DBUG: {stuNum} took a mental health day on at building {entry[1]} on {entry[3].strftime("%m/%d/%y")}')
+                        if (FIRST_NOTIFY_THRESHOLD <= len(entries) < SECOND_NOTIFY_THRESHOLD) and not firstNotification:  # if we have met the threshold for stage 1 and the notification has not already been sent, send an email
+                            toEmail = schoolAbbrev + EMAIL_GROUP_SUFFIX  # make the school specific email group string
+                            if school == 5:
+                                toEmail = f'{toEmail},{guidanceCounselorEmail},{deansEmail},{socialWorkerEmail},{psychologistEmail}'  # if we are at the high school, need to add their specific student service team
+                            print(f'INFO: {stuNum} has reached the warning threshold of {len(entries)} mental health days and a notification has not been sent, sending email to {toEmail}')
+                            try:
+                                mime_message = EmailMessage()  # create an email message object
+                                # define headers
+                                mime_message['To'] = toEmail
+                                mime_message['Subject'] = f'{len(entries)} Mental Health Days Taken For {stuNum} - {firstName} {lastName}'  # subject line of the email
+                                mime_message.set_content(f'This email is to warn you that {stuNum} - {firstName} {lastName} has reached {len(entries)} mental health excused absences for this school year. Please take the appropriate steps to address this with the student and parent/guardian.')  # body of the email
+                                # encoded message
+                                encoded_message = base64.urlsafe_b64encode(mime_message.as_bytes()).decode()
+                                create_message = {'raw': encoded_message}
+                                send_message = (service.users().messages().send(userId="me", body=create_message).execute())
+                                print(f'DBUG: Email sent, message ID: {send_message["id"]}') # print out resulting message Id
+                                print(f'DBUG: Email sent, message ID: {send_message["id"]}', file=log)
+                                # update the notificaton field to be true so that we dont sent more than one email a year
+                                ps_update_custom_field('u_chronicabsenteeism', 'mentalhealth_notified', stuDCID, True)
+
+                            except HttpError as er:   # catch Google API http errors, get the specific message and reason from them for better logging
+                                status = er.status_code
+                                details = er.error_details[0]  # error_details returns a list with a dict inside of it, just strip it to the first dict
+                                print(f'ERROR {status} from Google API while sending mental health notification email: {details["message"]}. Reason: {details["reason"]}')
+                                print(f'ERROR {status} from Google API while sending mental health notification email: {details["message"]}. Reason: {details["reason"]}', file=log)
+                            except Exception as er:
+                                print(f'ERROR while sending mental health notification for student {stuNum}: {er}')
+                                print(f'ERROR while sending mental health notification for student {stuNum}: {er}', file=log)
+
+                        elif (len(entries) >= SECOND_NOTIFY_THRESHOLD) and not secondNotification:  # if we have met the threshold for stage 2 and the notification has not already been sent, send an email
+                            toEmail = schoolAbbrev + EMAIL_GROUP_SUFFIX  # make the school specific email group string
+                            if school == 5:
+                                toEmail = f'{toEmail},{guidanceCounselorEmail},{deansEmail},{socialWorkerEmail},{psychologistEmail}'  # if we are at the high school, need to add their specific student service team
+                            print(f'INFO: {stuNum} has reached the max threshold with {len(entries)} mental health days and a notification has not been sent, sending email to {toEmail}')
+                            try:
+                                mime_message = EmailMessage()  # create an email message object
+                                # define headers
+                                mime_message['To'] = toEmail
+                                mime_message['Subject'] = f'Maximum Mental Health Days Taken For {stuNum} - {firstName} {lastName}'  # subject line of the email
+                                mime_message.set_content(f'This email is to inform you that {stuNum} - {firstName} {lastName} has reached the maximum allowed mental health excused absences of {len(entries)} for this school year. Please take the appropriate steps to address this with the student and parent/guardian.')  # body of the email
+                                # encoded message
+                                encoded_message = base64.urlsafe_b64encode(mime_message.as_bytes()).decode()
+                                create_message = {'raw': encoded_message}
+                                send_message = (service.users().messages().send(userId="me", body=create_message).execute())
+                                print(f'DBUG: Email sent, message ID: {send_message["id"]}') # print out resulting message Id
+                                print(f'DBUG: Email sent, message ID: {send_message["id"]}', file=log)
+                                # update the notificaton field to be true so that we dont sent more than one email a year
+                                ps_update_custom_field('u_chronicabsenteeism', 'mentalhealth_notified_2', stuDCID, True)
+
+                            except HttpError as er:   # catch Google API http errors, get the specific message and reason from them for better logging
+                                status = er.status_code
+                                details = er.error_details[0]  # error_details returns a list with a dict inside of it, just strip it to the first dict
+                                print(f'ERROR {status} from Google API while sending mental health notification email: {details["message"]}. Reason: {details["reason"]}')
+                                print(f'ERROR {status} from Google API while sending mental health notification email: {details["message"]}. Reason: {details["reason"]}', file=log)
+                            except Exception as er:
+                                print(f'ERROR while sending mental health notification for student {stuNum}: {er}')
+                                print(f'ERROR while sending mental health notification for student {stuNum}: {er}', file=log)
+
+        endTime = datetime.now()
+        endTime = endTime.strftime('%H:%M:%S')
+        print(f'INFO: Execution started at {endTime}')
+        print(f'INFO: Execution started at {endTime}', file=log)
