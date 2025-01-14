@@ -13,6 +13,7 @@ import json
 import os  # needed for environement variable reading
 import sys
 from datetime import *
+from email.message import EmailMessage
 
 # importing module
 import acme_powerschool
@@ -22,7 +23,6 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from email.message import EmailMessage
 
 # setup db connection
 DB_UN = os.environ.get('POWERSCHOOL_READ_USER')  # username for read-only database user
@@ -38,11 +38,11 @@ SCOPES = ['https://www.googleapis.com/auth/gmail.compose']
 
 EMAIL_GROUP_SUFFIX = '-mental-notifications@d118.org'  # a suffix to be appended to the school abbreviations and will make up the group email
 ATTENDANCE_CODE = 'MH'  # the attendance code we will actually search for
-FIRST_NOTIFY_THRESHOLD = 3  # when this number of the code above is reached it will send the 1st notification
-SECOND_NOTIFY_THRESHOLD = 5  # when this number of the code above is reached it will send the 2nd notification
+FIRST_NOTIFY_THRESHOLD = 3  # when this number of the code above is reached for the first time it will send the 1st notification
+SECOND_NOTIFY_THRESHOLD = 5  # when this number of the code above is reached for the first time it will send the 2nd notification. When it is greater than this number it will send a warning every time
 
 
-def ps_update_custom_field(table: str, field: str, dcid: int, value) -> str:
+def ps_update_custom_field(table: str, field: str, dcid: int, value: any) -> str:
     """Function to do the update of a custom field in a student extension table, so that the large json does not need to be used every time an update is needed elsewhere."""
     # print(f'DBUG: table {table}, field {field}, student DCID {dcid}, value {value}')
     try:
@@ -102,10 +102,10 @@ if __name__ == '__main__':
             # Save the credentials for the next run
             with open('token.json', 'w') as token:
                 token.write(creds.to_json())
-        
+
         service = build('gmail', 'v1', credentials=creds)  # create the Google API service with just gmail functionality
 
-        ps = acme_powerschool.api('d118-powerschool.info', client_id=d118_client_id, client_secret=d118_client_secret) # create ps object via the API to do requests on
+        ps = acme_powerschool.api('d118-powerschool.info', client_id=d118_client_id, client_secret=d118_client_secret)  # create ps object via the API to do requests on
 
         # create the connecton to the PowerSchool database
         with oracledb.connect(user=DB_UN, password=DB_PW, dsn=DB_CS) as con:
@@ -130,8 +130,8 @@ if __name__ == '__main__':
                     print(f'ERROR while trying to find termyear for todays date of {today}: {er}')
                     print(f'ERROR while trying to find termyear for todays date of {today}: {er}', file=log)
                 if not termYear:  # if we could not find a term year that contained todays date
-                    print(f'ERROR: Could not find a matching term year for todays date, ending execution')
-                    print(f'ERROR: Could not find a matching term year for todays date, ending execution', file=log)
+                    print('ERROR: Could not find a matching term year for todays date to get attendance from, ending mental health notification execution')
+                    print('ERROR: Could not find a matching term year for todays date to get attendance from, ending mental health notification execution', file=log)
                     sys.exit()  # end the script
 
                 # get a map of school code to attendance codes from the attendance_code table
@@ -157,8 +157,8 @@ if __name__ == '__main__':
                         stuNum = int(student[0])  # normal ID number
                         stuID = int(student[1])  # ps internal ID number, used in attendance table
                         stuDCID = int(student[2])
-                        firstName = str(student[3])
-                        lastName = str(student[4])
+                        firstName = str(student[3]).title()  # have it be normal capitalization, not all caps like in PS
+                        lastName = str(student[4]).title()  # have it be normal capitalization, not all caps like in PS
                         school = int(student[5])
                         schoolAbbrev = str(student[6])
                         guidanceCounselorEmail = str(student[7])
@@ -194,9 +194,9 @@ if __name__ == '__main__':
                                         encoded_message = base64.urlsafe_b64encode(mime_message.as_bytes()).decode()
                                         create_message = {'raw': encoded_message}
                                         send_message = (service.users().messages().send(userId="me", body=create_message).execute())
-                                        print(f'DBUG: Email sent, message ID: {send_message["id"]}') # print out resulting message Id
+                                        print(f'DBUG: Email sent, message ID: {send_message["id"]}')  # print out resulting message Id
                                         print(f'DBUG: Email sent, message ID: {send_message["id"]}', file=log)
-                                        # update the notificaton field to be true so that we dont sent more than one email a year
+                                        # # update the notificaton field to be true so that we dont sent more than one email a year
                                         ps_update_custom_field('u_chronicabsenteeism', 'mentalhealth_notified', stuDCID, True)
 
                                     except HttpError as er:   # catch Google API http errors, get the specific message and reason from them for better logging
@@ -208,7 +208,7 @@ if __name__ == '__main__':
                                         print(f'ERROR while sending mental health notification for student {stuNum}: {er}')
                                         print(f'ERROR while sending mental health notification for student {stuNum}: {er}', file=log)
 
-                                elif (len(entries) >= SECOND_NOTIFY_THRESHOLD) and not secondNotification:  # if we have met the threshold for stage 2 and the notification has not already been sent, send an email
+                                elif (len(entries) == SECOND_NOTIFY_THRESHOLD) and not secondNotification:  # if we have met the threshold for stage 2 and the notification has not already been sent, send an email
                                     toEmail = schoolAbbrev + EMAIL_GROUP_SUFFIX  # make the school specific email group string
                                     if school == 5:
                                         toEmail = f'{toEmail},{guidanceCounselorEmail},{deansEmail},{socialWorkerEmail},{psychologistEmail}'  # if we are at the high school, need to add their specific student service team
@@ -224,7 +224,7 @@ if __name__ == '__main__':
                                         encoded_message = base64.urlsafe_b64encode(mime_message.as_bytes()).decode()
                                         create_message = {'raw': encoded_message}
                                         send_message = (service.users().messages().send(userId="me", body=create_message).execute())
-                                        print(f'DBUG: Email sent, message ID: {send_message["id"]}') # print out resulting message Id
+                                        print(f'DBUG: Email sent, message ID: {send_message["id"]}')  # print out resulting message Id
                                         print(f'DBUG: Email sent, message ID: {send_message["id"]}', file=log)
                                         # update the notificaton field to be true so that we dont sent more than one email a year
                                         ps_update_custom_field('u_chronicabsenteeism', 'mentalhealth_notified_2', stuDCID, True)
@@ -237,14 +237,42 @@ if __name__ == '__main__':
                                     except Exception as er:
                                         print(f'ERROR while sending mental health notification for student {stuNum}: {er}')
                                         print(f'ERROR while sending mental health notification for student {stuNum}: {er}', file=log)
+                                # when the student has more than 5 absences (which they should not have, send a warning email)
+                                elif (len(entries) > SECOND_NOTIFY_THRESHOLD):  # if we have are above the 2nd/final threshold, send an email every time until they get the days back under the threshold
+                                    toEmail = schoolAbbrev + EMAIL_GROUP_SUFFIX  # make the school specific email group string
+                                    if school == 5:
+                                        toEmail = f'{toEmail},{guidanceCounselorEmail},{deansEmail},{socialWorkerEmail},{psychologistEmail}'  # if we are at the high school, need to add their specific student service team
+                                    print(f'INFO: {stuNum} has exceeded the maximum allowed number of mental health days, currently with {len(entries)} days taken, sending email every time to {toEmail}')
+                                    print(f'INFO: {stuNum} has exceeded the maximum allowed number of mental health days, currently with {len(entries)} days taken, sending email every time to {toEmail}', file=log)
+                                    try:
+                                        mime_message = EmailMessage()  # create an email message object
+                                        # define headers
+                                        mime_message['To'] = toEmail
+                                        mime_message['Subject'] = f'MAXIMUM MENTAL HEALTH DAYS EXCEEDED For {stuNum} - {firstName} {lastName}'  # subject line of the email
+                                        mime_message.set_content(f'This email is to warn you that {stuNum} - {firstName} {lastName} has exceeded the maximum allowed mental health excused absences of {SECOND_NOTIFY_THRESHOLD} by currently having {len(entries)} for this school year. Please work with the student and their parent/guardian and update the attendance codes to bring their mental health absences back down to {SECOND_NOTIFY_THRESHOLD} days.')  # body of the email
+                                        # encoded message
+                                        encoded_message = base64.urlsafe_b64encode(mime_message.as_bytes()).decode()
+                                        create_message = {'raw': encoded_message}
+                                        send_message = (service.users().messages().send(userId="me", body=create_message).execute())
+                                        print(f'DBUG: Email sent, message ID: {send_message["id"]}')  # print out resulting message Id
+                                        print(f'DBUG: Email sent, message ID: {send_message["id"]}', file=log)
+
+                                    except HttpError as er:   # catch Google API http errors, get the specific message and reason from them for better logging
+                                        status = er.status_code
+                                        details = er.error_details[0]  # error_details returns a list with a dict inside of it, just strip it to the first dict
+                                        print(f'ERROR {status} from Google API while sending mental health notification email: {details["message"]}. Reason: {details["reason"]}')
+                                        print(f'ERROR {status} from Google API while sending mental health notification email: {details["message"]}. Reason: {details["reason"]}', file=log)
+                                    except Exception as er:
+                                        print(f'ERROR while sending mental health notification for student {stuNum}: {er}')
+                                        print(f'ERROR while sending mental health notification for student {stuNum}: {er}', file=log)
                             except Exception as er:
-                                print(f'ERROR while doing day counting and intial notification decision for {stuNum}: {er}')
-                                print(f'ERROR while doing day counting and intial notification decision for {stuNum}: {er}', file=log)
+                                print(f'ERROR while doing day counting and intial mental health notification decision for {stuNum}: {er}')
+                                print(f'ERROR while doing day counting and intial mental health notification decision for {stuNum}: {er}', file=log)
                     except Exception as er:
-                        print(f'ERROR while doing intial information processing or attendance query for student {student[0]}: {er}')
-                        print(f'ERROR while doing intial information processing or attendance query for student {student[0]}: {er}', file=log)
+                        print(f'ERROR while doing intial information processing or mental health attendance query for student {student[0]}: {er}')
+                        print(f'ERROR while doing intial information processing or mental health attendance query for student {student[0]}: {er}', file=log)
 
         endTime = datetime.now()
         endTime = endTime.strftime('%H:%M:%S')
-        print(f'INFO: Execution started at {endTime}')
-        print(f'INFO: Execution started at {endTime}', file=log)
+        print(f'INFO: Execution ended at {endTime}')
+        print(f'INFO: Execution ended at {endTime}', file=log)
