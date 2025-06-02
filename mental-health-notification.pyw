@@ -72,8 +72,8 @@ def ps_update_custom_field(table: str, field: str, dcid: int, value: any) -> str
         print(f'ERROR while trying to update custom field {field} in table {table} for student DCID {dcid}: {er}')
         return 'ERROR'
     if statusCode != 'SUCCESS':
-        print(f'ERROR: Could not update field {field}  in table {table} for student DCID {dcid}, status {result.json().get('results').get('result')}')
-        print(f'ERROR: Could not update field {field}  in table {table} for student DCID {dcid}, status {result.json().get('results').get('result')}', file=log)
+        print(f"ERROR: Could not update field {field}  in table {table} for student DCID {dcid}, status {result.json().get('results').get('result')}")
+        print(f"ERROR: Could not update field {field}  in table {table} for student DCID {dcid}, status {result.json().get('results').get('result')}", file=log)
     else:
         print(f'DBUG: Successfully updated field {field} in table {table} for student DCID {dcid} to {value}')
         print(f'DBUG: Successfully updated field {field} in table {table} for student DCID {dcid} to {value}', file=log)
