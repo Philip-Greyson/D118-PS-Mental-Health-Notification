@@ -130,8 +130,8 @@ if __name__ == '__main__':
                     print(f'ERROR while trying to find termyear for todays date of {today}: {er}')
                     print(f'ERROR while trying to find termyear for todays date of {today}: {er}', file=log)
                 if not termYear:  # if we could not find a term year that contained todays date
-                    print('ERROR: Could not find a matching term year for todays date to get attendance from, ending mental health notification execution')
-                    print('ERROR: Could not find a matching term year for todays date to get attendance from, ending mental health notification execution', file=log)
+                    print('WARN: Could not find a matching term year for todays date to get attendance from, ending mental health notification execution')
+                    print('WARN: Could not find a matching term year for todays date to get attendance from, ending mental health notification execution', file=log)
                     sys.exit()  # end the script
 
                 # get a map of school code to attendance codes from the attendance_code table
