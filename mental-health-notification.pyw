@@ -40,6 +40,7 @@ EMAIL_GROUP_SUFFIX = '-mental-notifications@d118.org'  # a suffix to be appended
 ATTENDANCE_CODE = 'MH'  # the attendance code we will actually search for
 FIRST_NOTIFY_THRESHOLD = 3  # when this number of the code above is reached for the first time it will send the 1st notification
 SECOND_NOTIFY_THRESHOLD = 5  # when this number of the code above is reached for the first time it will send the 2nd notification. When it is greater than this number it will send a warning every time
+DO_PARENT_NOTIFICATIONS = False
 PARENT_NOTIFY_SCHOOLIDS = [5]  # list of school codes that will get the parent notification portion
 TEST_RUN = False  # flag for shifting to testing mode where all emails are sent to specific test email, and custom fields are not updated
 TEST_EMAIL = ''  # the email that will be used for testing mode
@@ -285,7 +286,7 @@ if __name__ == '__main__':
                                     print(f'DBUG: {stuNum} took a mental health day on at building {entry[1]} on {entry[3].strftime("%m/%d/%y")}')
                                     print(f'DBUG: {stuNum} took a mental health day on at building {entry[1]} on {entry[3].strftime("%m/%d/%y")}', file=log)
                                 if (FIRST_NOTIFY_THRESHOLD <= len(entries) < SECOND_NOTIFY_THRESHOLD) and not firstNotification:  # if we have met the threshold for stage 1 and the notification has not already been sent, send an email
-                                    if school in PARENT_NOTIFY_SCHOOLIDS and not firstParentNotification:  # if we are in a building where we need to notify parents and it hasnt been sent yet
+                                    if school in PARENT_NOTIFY_SCHOOLIDS and not firstParentNotification and DO_PARENT_NOTIFICATIONS:  # if we are in a building where we need to notify parents and it hasnt been sent yet but we want to
                                         email_custodial_contacts(stuDCID, stuNum, requestedLanguage, 1, len(entries))  # call the function that will email parents
                                     toEmail = schoolAbbrev + EMAIL_GROUP_SUFFIX  # make the school specific email group string
                                     if school == 5:
@@ -321,7 +322,7 @@ if __name__ == '__main__':
                                         print(f'ERROR while sending mental health notification for student {stuNum}: {er}', file=log)
 
                                 elif (len(entries) == SECOND_NOTIFY_THRESHOLD) and not secondNotification:  # if we have met the threshold for stage 2 and the notification has not already been sent, send an email
-                                    if school in PARENT_NOTIFY_SCHOOLIDS and not secondParentNotification:  # if we are in a building where we need to notify parents and it hasnt been sent yet
+                                    if school in PARENT_NOTIFY_SCHOOLIDS and not secondParentNotification and DO_PARENT_NOTIFICATIONS:  # if we are in a building where we need to notify parents and it hasnt been sent yet but we want to
                                         email_custodial_contacts(stuDCID, stuNum, requestedLanguage, 2, len(entries))  # call the function that will email parents
                                     toEmail = schoolAbbrev + EMAIL_GROUP_SUFFIX  # make the school specific email group string
                                     if school == 5:
