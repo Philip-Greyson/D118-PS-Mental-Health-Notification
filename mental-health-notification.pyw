@@ -107,15 +107,15 @@ def email_custodial_contacts(student_dcid:int, student_number:int, language:str,
             for contact in contactsToEmail:
                 try:
                     contactFirstLast = f'{contact[0]} {contact[1]}'  # get their name in one string
-                    if TEST_RUN:
-                        toEmail = TEST_EMAIL
-                    else:
-                        toEmail = str(contact[2])
+                    toEmail = str(contact[2])
                     print(f'INFO: Student {student_number} has reached the first threshold with {days} mental health days, sending email to contact {contactFirstLast} at {toEmail}, requested language is {language}')
                     print(f'INFO: Student {student_number} has reached the first threshold with {days} mental health days, sending email to contact {contactFirstLast} at {toEmail}, requested language is {language}', file=log)
                     mime_message = EmailMessage()  # create an email message object
                     # define headers
-                    mime_message['To'] = toEmail
+                    if TEST_RUN:
+                        mime_message['To'] = TEST_EMAIL
+                    else:
+                        mime_message['To'] = toEmail
                     if requestedLanguage == 'Spanish':
                         mime_message['Subject']  = 'Uso de Días de Salud Mental del Estudiante'  # subject line of the email
                         mime_message.set_content(f'Estimado/a {contactFirstLast}:\nEsperamos que este mensaje le encuentre bien. Nos comunicamos con usted para informarle que su estudiante ha utilizado {days} de los días de salud mental que tiene asignados durante el presente año escolar.\n\nReconocemos la importancia de la salud mental y el bienestar en el éxito y desarrollo integral de nuestros estudiantes. Según las pautas de la Junta de Educación del Estado de Illinois (ISBE, por sus siglas en inglés), los estudiantes tienen derecho a hasta 5 días de salud mental por cada año escolar. Estos días están destinados a apoyar a los estudiantes en el manejo de su bienestar emocional y psicológico.\n\nLe animamos a seguir monitoreando y apoyando la salud de su estudiante, y le invitamos a comunicarse con nuestros consejeros escolares o el personal de Servicios Estudiantiles si considera que se necesita apoyo adicional. Nuestro equipo está aquí para ayudar tanto a los estudiantes como a las familias a enfrentar estos retos.\n\nSi tiene alguna pregunta o necesita más asistencia, no dude en ponerse en contacto con nosotros.\n\nGracias por colaborar con nosotros para apoyar el bienestar de su estudiante.')
@@ -146,15 +146,15 @@ def email_custodial_contacts(student_dcid:int, student_number:int, language:str,
             for contact in contactsToEmail:
                 try:
                     contactFirstLast = f'{contact[0]} {contact[1]}'  # get their name in one string
-                    if TEST_RUN:
-                        toEmail = TEST_EMAIL
-                    else:
-                        toEmail = str(contact[2])
+                    toEmail = str(contact[2])
                     print(f'INFO: Student {student_number} has reached the second threshold with {days} mental health days, sending email to contact {contactFirstLast} at {toEmail}, requested language is {language}')
                     print(f'INFO: Student {student_number} has reached the second threshold with {days} mental health days, sending email to contact {contactFirstLast} at {toEmail}, requested language is {language}', file=log)
                     mime_message = EmailMessage()  # create an email message object
                     # define headers
-                    mime_message['To'] = toEmail
+                    if TEST_RUN:
+                        mime_message['To'] = TEST_EMAIL
+                    else:
+                        mime_message['To'] = toEmail
                     if requestedLanguage == 'Spanish':
                         mime_message['Subject']  = 'Uso de Días de Salud Mental del Estudiante'  # subject line of the email
                         mime_message.set_content(f'Estimado/a {contactFirstLast}:\nNos comunicamos con usted para informarle que su estudiante ha utilizado los 5 días de salud mental asignados para el presente año escolar, según lo establecido por las pautas de la Junta de Educación del Estado de Illinois (ISBE, por sus siglas en inglés).\n\nQueremos enfatizar que la salud mental y el bienestar de su estudiante siguen siendo una de nuestras máximas prioridades. Aunque ya no quedan días de salud mental disponibles, queremos que sepa que nuestros consejeros escolares y el personal de Servicios Estudiantiles están aquí para brindar apoyo y recursos continuos a fin de ayudar a su estudiante.\n\nTenga en cuenta que cualquier ausencia adicional reportada como día de salud mental ya no se registrará como tal, sino que se clasificará como una ausencia justificada. Estas ausencias se incluirán en el registro general de asistencia de su estudiante y podrían afectar su elegibilidad para participar en actividades extracurriculares y deportes.\n\nSi considera que se necesita apoyo adicional, le animamos a ponerse en contacto con nuestro equipo de Servicios Estudiantiles para que podamos trabajar juntos y asegurar que su estudiante siga recibiendo el apoyo que necesita.\n\nGracias por colaborar con nosotros para apoyar la salud y el éxito de su estudiante.')
@@ -285,77 +285,80 @@ if __name__ == '__main__':
                                 for entry in entries:
                                     print(f'DBUG: {stuNum} took a mental health day on at building {entry[1]} on {entry[3].strftime("%m/%d/%y")}')
                                     print(f'DBUG: {stuNum} took a mental health day on at building {entry[1]} on {entry[3].strftime("%m/%d/%y")}', file=log)
-                                if (FIRST_NOTIFY_THRESHOLD <= len(entries) < SECOND_NOTIFY_THRESHOLD) and not firstNotification:  # if we have met the threshold for stage 1 and the notification has not already been sent, send an email
+                                if (FIRST_NOTIFY_THRESHOLD <= len(entries) < SECOND_NOTIFY_THRESHOLD):  # if we have met the threshold for stage 1
                                     if school in PARENT_NOTIFY_SCHOOLIDS and not firstParentNotification and DO_PARENT_NOTIFICATIONS:  # if we are in a building where we need to notify parents and it hasnt been sent yet but we want to
-                                        email_custodial_contacts(stuDCID, stuNum, requestedLanguage, 1, len(entries))  # call the function that will email parents
-                                    toEmail = schoolAbbrev + EMAIL_GROUP_SUFFIX  # make the school specific email group string
-                                    if school == 5:
-                                        toEmail = f'{toEmail},{guidanceCounselorEmail},{deansEmail},{socialWorkerEmail},{psychologistEmail}'  # if we are at the high school, need to add their specific student service team
-                                    print(f'INFO: {stuNum} has reached the warning threshold of {len(entries)} mental health days and a notification has not been sent, sending email to {toEmail}')
-                                    print(f'INFO: {stuNum} has reached the warning threshold of {len(entries)} mental health days and a notification has not been sent, sending email to {toEmail}', file=log)
-                                    try:
-                                        mime_message = EmailMessage()  # create an email message object
-                                        # define headers
-                                        if TEST_RUN:
-                                            mime_message['To'] = TEST_EMAIL
-                                        else:
-                                            mime_message['To'] = toEmail
-                                        mime_message['Subject'] = f'{len(entries)} Mental Health Days Taken For {stuNum} - {firstName} {lastName}'  # subject line of the email
-                                        mime_message.set_content(f'This email is to warn you that {stuNum} - {firstName} {lastName} has reached {len(entries)} mental health excused absences for this school year. Please take the appropriate steps to address this with the student and parent/guardian.')  # body of the email
-                                        # encoded message
-                                        encoded_message = base64.urlsafe_b64encode(mime_message.as_bytes()).decode()
-                                        create_message = {'raw': encoded_message}
-                                        send_message = (service.users().messages().send(userId="me", body=create_message).execute())
-                                        print(f'DBUG: Email sent, message ID: {send_message["id"]}')  # print out resulting message Id
-                                        print(f'DBUG: Email sent, message ID: {send_message["id"]}', file=log)
-                                        # # update the notificaton field to be true so that we dont sent more than one email a year
-                                        if not TEST_RUN:
-                                            ps_update_custom_field('u_chronicabsenteeism', 'mentalhealth_notified', stuDCID, True)
+                                        email_custodial_contacts(stuDCID, stuNum, requestedLanguage, 1, len(entries))  # call the function that will email parents/contacts with custodial rights
+                                    if not firstNotification:  # if we have not already sent a notification to the school staff group
+                                        toEmail = schoolAbbrev + EMAIL_GROUP_SUFFIX  # make the school specific email group string
+                                        if school == 5:
+                                            toEmail = f'{toEmail},{guidanceCounselorEmail},{deansEmail},{socialWorkerEmail},{psychologistEmail}'  # if we are at the high school, need to add their specific student service team
+                                        print(f'INFO: {stuNum} has reached the warning threshold of {len(entries)} mental health days and a notification has not been sent, sending email to {toEmail}')
+                                        print(f'INFO: {stuNum} has reached the warning threshold of {len(entries)} mental health days and a notification has not been sent, sending email to {toEmail}', file=log)
+                                        try:
+                                            mime_message = EmailMessage()  # create an email message object
+                                            # define headers
+                                            if TEST_RUN:
+                                                mime_message['To'] = TEST_EMAIL
+                                            else:
+                                                mime_message['To'] = toEmail
+                                            mime_message['Subject'] = f'{len(entries)} Mental Health Days Taken For {stuNum} - {firstName} {lastName}'  # subject line of the email
+                                            mime_message.set_content(f'This email is to warn you that {stuNum} - {firstName} {lastName} has reached {len(entries)} mental health excused absences for this school year. Please take the appropriate steps to address this with the student and parent/guardian.')  # body of the email
+                                            # encoded message
+                                            encoded_message = base64.urlsafe_b64encode(mime_message.as_bytes()).decode()
+                                            create_message = {'raw': encoded_message}
+                                            send_message = (service.users().messages().send(userId="me", body=create_message).execute())
+                                            print(f'DBUG: Email sent, message ID: {send_message["id"]}')  # print out resulting message Id
+                                            print(f'DBUG: Email sent, message ID: {send_message["id"]}', file=log)
+                                            # # update the notificaton field to be true so that we dont sent more than one email a year
+                                            if not TEST_RUN:
+                                                ps_update_custom_field('u_chronicabsenteeism', 'mentalhealth_notified', stuDCID, True)
 
-                                    except HttpError as er:   # catch Google API http errors, get the specific message and reason from them for better logging
-                                        status = er.status_code
-                                        details = er.error_details[0]  # error_details returns a list with a dict inside of it, just strip it to the first dict
-                                        print(f'ERROR {status} from Google API while sending mental health notification email: {details["message"]}. Reason: {details["reason"]}')
-                                        print(f'ERROR {status} from Google API while sending mental health notification email: {details["message"]}. Reason: {details["reason"]}', file=log)
-                                    except Exception as er:
-                                        print(f'ERROR while sending mental health notification for student {stuNum}: {er}')
-                                        print(f'ERROR while sending mental health notification for student {stuNum}: {er}', file=log)
+                                        except HttpError as er:   # catch Google API http errors, get the specific message and reason from them for better logging
+                                            status = er.status_code
+                                            details = er.error_details[0]  # error_details returns a list with a dict inside of it, just strip it to the first dict
+                                            print(f'ERROR {status} from Google API while sending mental health notification email: {details["message"]}. Reason: {details["reason"]}')
+                                            print(f'ERROR {status} from Google API while sending mental health notification email: {details["message"]}. Reason: {details["reason"]}', file=log)
+                                        except Exception as er:
+                                            print(f'ERROR while sending mental health notification for student {stuNum}: {er}')
+                                            print(f'ERROR while sending mental health notification for student {stuNum}: {er}', file=log)
 
-                                elif (len(entries) == SECOND_NOTIFY_THRESHOLD) and not secondNotification:  # if we have met the threshold for stage 2 and the notification has not already been sent, send an email
+                                elif (len(entries) == SECOND_NOTIFY_THRESHOLD):  # if we have met the threshold for stage 2
                                     if school in PARENT_NOTIFY_SCHOOLIDS and not secondParentNotification and DO_PARENT_NOTIFICATIONS:  # if we are in a building where we need to notify parents and it hasnt been sent yet but we want to
                                         email_custodial_contacts(stuDCID, stuNum, requestedLanguage, 2, len(entries))  # call the function that will email parents
-                                    toEmail = schoolAbbrev + EMAIL_GROUP_SUFFIX  # make the school specific email group string
-                                    if school == 5:
-                                        toEmail = f'{toEmail},{guidanceCounselorEmail},{deansEmail},{socialWorkerEmail},{psychologistEmail}'  # if we are at the high school, need to add their specific student service team
-                                    print(f'INFO: {stuNum} has reached the max threshold with {len(entries)} mental health days and a notification has not been sent, sending email to {toEmail}')
-                                    print(f'INFO: {stuNum} has reached the max threshold with {len(entries)} mental health days and a notification has not been sent, sending email to {toEmail}', file=log)
-                                    try:
-                                        mime_message = EmailMessage()  # create an email message object
-                                        # define headers
-                                        if TEST_RUN:
-                                            mime_message['To'] = TEST_EMAIL
-                                        else:
-                                            mime_message['To'] = toEmail
-                                        mime_message['Subject'] = f'Maximum Mental Health Days Taken For {stuNum} - {firstName} {lastName}'  # subject line of the email
-                                        mime_message.set_content(f'This email is to inform you that {stuNum} - {firstName} {lastName} has reached the maximum allowed mental health excused absences of {len(entries)} for this school year. Please take the appropriate steps to address this with the student and parent/guardian.')  # body of the email
-                                        # encoded message
-                                        encoded_message = base64.urlsafe_b64encode(mime_message.as_bytes()).decode()
-                                        create_message = {'raw': encoded_message}
-                                        send_message = (service.users().messages().send(userId="me", body=create_message).execute())
-                                        print(f'DBUG: Email sent, message ID: {send_message["id"]}')  # print out resulting message Id
-                                        print(f'DBUG: Email sent, message ID: {send_message["id"]}', file=log)
-                                        # update the notificaton field to be true so that we dont sent more than one email a year
-                                        if not TEST_RUN:
-                                            ps_update_custom_field('u_chronicabsenteeism', 'mentalhealth_notified_2', stuDCID, True)
+                                    if not secondNotification:  # if we have not sent the notification to the school staff group
+                                        toEmail = schoolAbbrev + EMAIL_GROUP_SUFFIX  # make the school specific email group string
+                                        if school == 5:
+                                            toEmail = f'{toEmail},{guidanceCounselorEmail},{deansEmail},{socialWorkerEmail},{psychologistEmail}'  # if we are at the high school, need to add their specific student service team
+                                        print(f'INFO: {stuNum} has reached the max threshold with {len(entries)} mental health days and a notification has not been sent, sending email to {toEmail}')
+                                        print(f'INFO: {stuNum} has reached the max threshold with {len(entries)} mental health days and a notification has not been sent, sending email to {toEmail}', file=log)
+                                        try:
+                                            mime_message = EmailMessage()  # create an email message object
+                                            # define headers
+                                            if TEST_RUN:
+                                                mime_message['To'] = TEST_EMAIL
+                                            else:
+                                                mime_message['To'] = toEmail
+                                            mime_message['Subject'] = f'Maximum Mental Health Days Taken For {stuNum} - {firstName} {lastName}'  # subject line of the email
+                                            mime_message.set_content(f'This email is to inform you that {stuNum} - {firstName} {lastName} has reached the maximum allowed mental health excused absences of {len(entries)} for this school year. Please take the appropriate steps to address this with the student and parent/guardian.')  # body of the email
+                                            # encoded message
+                                            encoded_message = base64.urlsafe_b64encode(mime_message.as_bytes()).decode()
+                                            create_message = {'raw': encoded_message}
+                                            send_message = (service.users().messages().send(userId="me", body=create_message).execute())
+                                            print(f'DBUG: Email sent, message ID: {send_message["id"]}')  # print out resulting message Id
+                                            print(f'DBUG: Email sent, message ID: {send_message["id"]}', file=log)
+                                            # update the notificaton field to be true so that we dont sent more than one email a year
+                                            if not TEST_RUN:
+                                                ps_update_custom_field('u_chronicabsenteeism', 'mentalhealth_notified_2', stuDCID, True)
 
-                                    except HttpError as er:   # catch Google API http errors, get the specific message and reason from them for better logging
-                                        status = er.status_code
-                                        details = er.error_details[0]  # error_details returns a list with a dict inside of it, just strip it to the first dict
-                                        print(f'ERROR {status} from Google API while sending mental health notification email: {details["message"]}. Reason: {details["reason"]}')
-                                        print(f'ERROR {status} from Google API while sending mental health notification email: {details["message"]}. Reason: {details["reason"]}', file=log)
-                                    except Exception as er:
-                                        print(f'ERROR while sending mental health notification for student {stuNum}: {er}')
-                                        print(f'ERROR while sending mental health notification for student {stuNum}: {er}', file=log)
+                                        except HttpError as er:   # catch Google API http errors, get the specific message and reason from them for better logging
+                                            status = er.status_code
+                                            details = er.error_details[0]  # error_details returns a list with a dict inside of it, just strip it to the first dict
+                                            print(f'ERROR {status} from Google API while sending mental health notification email: {details["message"]}. Reason: {details["reason"]}')
+                                            print(f'ERROR {status} from Google API while sending mental health notification email: {details["message"]}. Reason: {details["reason"]}', file=log)
+                                        except Exception as er:
+                                            print(f'ERROR while sending mental health notification for student {stuNum}: {er}')
+                                            print(f'ERROR while sending mental health notification for student {stuNum}: {er}', file=log)
+
                                 # when the student has more than 5 absences (which they should not have, send a warning email)
                                 elif (len(entries) > SECOND_NOTIFY_THRESHOLD):  # if we have are above the 2nd/final threshold, send an email every time until they get the days back under the threshold
                                     toEmail = schoolAbbrev + EMAIL_GROUP_SUFFIX  # make the school specific email group string
