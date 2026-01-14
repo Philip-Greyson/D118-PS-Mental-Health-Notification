@@ -40,7 +40,7 @@ EMAIL_GROUP_SUFFIX = '-mental-notifications@d118.org'  # a suffix to be appended
 ATTENDANCE_CODE = 'MH'  # the attendance code we will actually search for
 FIRST_NOTIFY_THRESHOLD = 3  # when this number of the code above is reached for the first time it will send the 1st notification
 SECOND_NOTIFY_THRESHOLD = 5  # when this number of the code above is reached for the first time it will send the 2nd notification. When it is greater than this number it will send a warning every time
-DO_PARENT_NOTIFICATIONS = False
+DO_PARENT_NOTIFICATIONS = True
 PARENT_NOTIFY_SCHOOLIDS = [5]  # list of school codes that will get the parent notification portion
 TEST_RUN = False  # flag for shifting to testing mode where all emails are sent to specific test email, and custom fields are not updated
 TEST_EMAIL = ''  # the email that will be used for testing mode
@@ -316,8 +316,8 @@ if __name__ == '__main__':
                                         except HttpError as er:   # catch Google API http errors, get the specific message and reason from them for better logging
                                             status = er.status_code
                                             details = er.error_details[0]  # error_details returns a list with a dict inside of it, just strip it to the first dict
-                                            print(f'ERROR {status} from Google API while sending mental health notification email: {details["message"]}. Reason: {details["reason"]}')
-                                            print(f'ERROR {status} from Google API while sending mental health notification email: {details["message"]}. Reason: {details["reason"]}', file=log)
+                                            print(f'ERROR {status} from Google API while sending mental health notification email for student {stuNum}: {details["message"]}. Reason: {details["reason"]}')
+                                            print(f'ERROR {status} from Google API while sending mental health notification email for student {stuNum}: {details["message"]}. Reason: {details["reason"]}', file=log)
                                         except Exception as er:
                                             print(f'ERROR while sending mental health notification for student {stuNum}: {er}')
                                             print(f'ERROR while sending mental health notification for student {stuNum}: {er}', file=log)
@@ -353,8 +353,8 @@ if __name__ == '__main__':
                                         except HttpError as er:   # catch Google API http errors, get the specific message and reason from them for better logging
                                             status = er.status_code
                                             details = er.error_details[0]  # error_details returns a list with a dict inside of it, just strip it to the first dict
-                                            print(f'ERROR {status} from Google API while sending mental health notification email: {details["message"]}. Reason: {details["reason"]}')
-                                            print(f'ERROR {status} from Google API while sending mental health notification email: {details["message"]}. Reason: {details["reason"]}', file=log)
+                                            print(f'ERROR {status} from Google API while sending mental health notification email for student {stuNum}: {details["message"]}. Reason: {details["reason"]}')
+                                            print(f'ERROR {status} from Google API while sending mental health notification email for student {stuNum}: {details["message"]}. Reason: {details["reason"]}', file=log)
                                         except Exception as er:
                                             print(f'ERROR while sending mental health notification for student {stuNum}: {er}')
                                             print(f'ERROR while sending mental health notification for student {stuNum}: {er}', file=log)
@@ -385,8 +385,8 @@ if __name__ == '__main__':
                                     except HttpError as er:   # catch Google API http errors, get the specific message and reason from them for better logging
                                         status = er.status_code
                                         details = er.error_details[0]  # error_details returns a list with a dict inside of it, just strip it to the first dict
-                                        print(f'ERROR {status} from Google API while sending mental health notification email: {details["message"]}. Reason: {details["reason"]}')
-                                        print(f'ERROR {status} from Google API while sending mental health notification email: {details["message"]}. Reason: {details["reason"]}', file=log)
+                                        print(f'ERROR {status} from Google API while sending mental health notification email for student {stuNum}: {details["message"]}. Reason: {details["reason"]}')
+                                        print(f'ERROR {status} from Google API while sending mental health notification email for student {stuNum}: {details["message"]}. Reason: {details["reason"]}', file=log)
                                     except Exception as er:
                                         print(f'ERROR while sending mental health notification for student {stuNum}: {er}')
                                         print(f'ERROR while sending mental health notification for student {stuNum}: {er}', file=log)
