@@ -265,10 +265,10 @@ if __name__ == '__main__':
                         lastName = str(student[4]).title()  # have it be normal capitalization, not all caps like in PS
                         school = int(student[5])
                         schoolAbbrev = str(student[6])
-                        guidanceCounselorEmail = str(student[7])
-                        deansEmail = str(student[8])
-                        socialWorkerEmail = str(student[9])
-                        psychologistEmail = str(student[10])
+                        guidanceCounselorEmail = str(student[7]) if student[7] else ''
+                        deansEmail = str(student[8]) if student[8] else ''
+                        socialWorkerEmail = str(student[9]) if student[9] else ''
+                        psychologistEmail = str(student[10]) if student[10] else ''
                         firstNotification = True if student[11] == 1 else False
                         secondNotification = True if student[12] == 1 else False
                         firstParentNotification = True if student[13] == 1 else False
@@ -316,8 +316,8 @@ if __name__ == '__main__':
                                         except HttpError as er:   # catch Google API http errors, get the specific message and reason from them for better logging
                                             status = er.status_code
                                             details = er.error_details[0]  # error_details returns a list with a dict inside of it, just strip it to the first dict
-                                            print(f'ERROR {status} from Google API while sending mental health notification email for student {stuNum}: {details["message"]}. Reason: {details["reason"]}')
-                                            print(f'ERROR {status} from Google API while sending mental health notification email for student {stuNum}: {details["message"]}. Reason: {details["reason"]}', file=log)
+                                            print(f'ERROR {status} from Google API while sending mental health notification email for student {stuNum} to {toEmail}: {details["message"]}. Reason: {details["reason"]}')
+                                            print(f'ERROR {status} from Google API while sending mental health notification email for student {stuNum} to {toEmail}: {details["message"]}. Reason: {details["reason"]}', file=log)
                                         except Exception as er:
                                             print(f'ERROR while sending mental health notification for student {stuNum}: {er}')
                                             print(f'ERROR while sending mental health notification for student {stuNum}: {er}', file=log)
