@@ -1,4 +1,4 @@
-"""Script to send out notifications when students reach certain amounts of specific attendance codes for the year.
+"""Script to send out notifications when students reach certain amounts of specific mental health day codes for the year.
 
 https://github.com/Philip-Greyson/D118-PS-Mental-Health-Notification
 
